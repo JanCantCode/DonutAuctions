@@ -1,10 +1,12 @@
 package tk.jandev.donutauctions.scraper.cache;
 
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
-import net.minecraft.component.DataComponentTypes;
-import net.minecraft.component.type.ItemEnchantmentsComponent;
 import net.minecraft.enchantment.Enchantment;
+import net.minecraft.enchantment.EnchantmentHelper;
 import net.minecraft.item.ItemStack;
+import net.minecraft.nbt.NbtCompound;
+import net.minecraft.nbt.NbtElement;
+import net.minecraft.nbt.NbtList;
 import net.minecraft.registry.Registries;
 import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.text.Text;
@@ -57,7 +59,9 @@ public class ItemCache {
 
         threadPool.submit(() -> {
             try {
+                System.out.println("trying to aquire api limit ");
                 rateLimiter.acquire(); // in case we have currently maxed out our requests, wait until we have not maxed our requests!
+                System.out.println("succesfully aquired for " + key.id);
 
                 Long foundPrice = this.scraper.findCheapestMatchingPrice(key.id, key.enchants, Map.of(), false);
 
@@ -77,18 +81,38 @@ public class ItemCache {
     }
 
     private CacheResult handleShulkerBox(ItemStack shulker) {
-        List<ItemStack> stacks = shulker.getComponents().get(DataComponentTypes.CONTAINER).stream().toList();
+        List<ItemStack> stacks = getShulkerBoxContents(shulker);
+        if (stacks == null) return new CacheResult(true, 0, System.currentTimeMillis());
 
-        int sum = 0;
+        long sum = 0;
         for (ItemStack stack : stacks) {
             CacheResult subResult = getPrice(stack);
 
             if (subResult.hasData) {
-                sum += subResult.priceData;
+                sum += subResult.priceData * stack.getCount();
             }
         }
 
         return CacheResult.data(sum);
+    }
+
+    public List<ItemStack> getShulkerBoxContents(ItemStack shulkerStack) {
+        NbtCompound nbt = shulkerStack.getNbt();
+        if (nbt == null || !nbt.contains("BlockEntityTag")) {
+            return null;
+        }
+        List<ItemStack> stacks = new ArrayList<>();
+
+        NbtCompound blockEntityTag = nbt.getCompound("BlockEntityTag");
+        NbtList itemsList = blockEntityTag.getList("Items", NbtElement.COMPOUND_TYPE);
+
+        for (int i = 0; i < itemsList.size(); i++) {
+            NbtCompound itemTag = itemsList.getCompound(i);
+            int slot = itemTag.getByte("Slot") & 255;
+            stacks.add(slot, ItemStack.fromNbt(itemTag));
+        }
+
+        return stacks;
     }
 
     public void supplyAPIKey(String key) {
@@ -108,14 +132,14 @@ public class ItemCache {
             String id = Registries.ITEM.getId(stack.getItem()).getPath();
             Map<String, Integer> enchants = new HashMap<>();
 
-            ItemEnchantmentsComponent component = stack.getEnchantments();
-            for (Object2IntMap.Entry<RegistryEntry<Enchantment>> entry : component.getEnchantmentEntries()) {
-                RegistryEntry<Enchantment> enchantName = entry.getKey();
 
-                String name = enchantName.getIdAsString();
-                int level = entry.getIntValue();
+            Map<Enchantment, Integer> mcEnchants = EnchantmentHelper.get(stack);
+            for (Map.Entry<Enchantment, Integer> mcEnchant : mcEnchants.entrySet()) {
+                Enchantment enchantment = mcEnchant.getKey();
 
-                enchants.put(name, level);
+                String name = Registries.ENCHANTMENT.getId(enchantment).toString();
+                System.out.println("found enchantment " + name);
+                enchants.put(name, mcEnchant.getValue());
             }
 
             return new DonutItem(id, enchants);
@@ -143,9 +167,9 @@ public class ItemCache {
             return (currentTime - acquireTime > DonutAuctions.getInstance().getCacheExpiration());
         }
 
-        public Text getMessage() {
+        public Text getMessage(int count) {
             if (hasData) return Text.literal("§7Auction-Value: ")
-                    .append(Text.literal("$" + FormattingUtil.formatCurrency(this.priceData)).styled(style -> style.withColor(MONEY_COLOR)));
+                    .append(Text.literal("$" + FormattingUtil.formatCurrency(this.priceData * count)).styled(style -> style.withColor(MONEY_COLOR)));
             if (priceData == 0) return Text.literal("§7Loading..");
             if (priceData == -1) return Text.literal("§cType /api to set your API-Key");
             return Text.literal("§7No Auctions Found");

@@ -3,6 +3,8 @@ package tk.jandev.donutauctions;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.item.ItemStack;
+import net.minecraft.screen.ScreenHandler;
 import net.minecraft.text.Text;
 import tk.jandev.donutauctions.config.SingleValueFile;
 import tk.jandev.donutauctions.scraper.cache.ItemCache;
@@ -17,11 +19,13 @@ public class DonutAuctions implements ClientModInitializer {
     private static DonutAuctions donutAuctions;
     private SingleValueFile apiKeyConfig;
     private final Pattern API_TOKEN_PATTERN = Pattern.compile("Your API Token is: (\\w{32})");
+    private MinecraftClient mc;
 
     private ItemCache itemCache;
     @Override
     public void onInitializeClient() {
         donutAuctions = this;
+        mc = MinecraftClient.getInstance();
         this.itemCache = ItemCache.getInstance();
 
         String dotMinecraft = MinecraftClient.getInstance().runDirectory.getAbsolutePath();
@@ -65,6 +69,15 @@ public class DonutAuctions implements ClientModInitializer {
         } catch (IOException e) {
 
         }
+    }
+
+    public boolean shouldShowPrice(ItemStack stack) {
+        if (mc.player == null) return false;
+        if (mc.player.getInventory().contains(stack)) return true;
+        ScreenHandler handler = mc.player.currentScreenHandler;
+        if (handler == null) return false;
+        if (handler.getStacks() == null) return false;
+        return (handler.getStacks().contains(stack));
     }
 
     public static DonutAuctions getInstance() {

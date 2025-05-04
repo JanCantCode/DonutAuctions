@@ -79,12 +79,12 @@ public class ItemCache {
     private CacheResult handleShulkerBox(ItemStack shulker) {
         List<ItemStack> stacks = shulker.getComponents().get(DataComponentTypes.CONTAINER).stream().toList();
 
-        int sum = 0;
+        long sum = 0;
         for (ItemStack stack : stacks) {
             CacheResult subResult = getPrice(stack);
 
             if (subResult.hasData) {
-                sum += subResult.priceData;
+                sum += subResult.priceData * stack.getCount();
             }
         }
 
@@ -143,9 +143,9 @@ public class ItemCache {
             return (currentTime - acquireTime > DonutAuctions.getInstance().getCacheExpiration());
         }
 
-        public Text getMessage() {
+        public Text getMessage(int count) {
             if (hasData) return Text.literal("§7Auction-Value: ")
-                    .append(Text.literal("$" + FormattingUtil.formatCurrency(this.priceData)).styled(style -> style.withColor(MONEY_COLOR)));
+                    .append(Text.literal("$" + FormattingUtil.formatCurrency(this.priceData * count)).styled(style -> style.withColor(MONEY_COLOR)));
             if (priceData == 0) return Text.literal("§7Loading..");
             if (priceData == -1) return Text.literal("§cType /api to set your API-Key");
             return Text.literal("§7No Auctions Found");

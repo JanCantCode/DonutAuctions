@@ -63,7 +63,7 @@ public class ItemCache {
                 rateLimiter.acquire(); // in case we have currently maxed out our requests, wait until we have not maxed our requests!
                 System.out.println("succesfully aquired for " + key.id);
 
-                Long foundPrice = this.scraper.findCheapestMatchingPrice(key.id, key.enchants, Map.of(), false);
+                Double foundPrice = this.scraper.findCheapestMatchingPrice(key.id, key.enchants, Map.of(), false);
 
                 CacheResult result;
                 if (foundPrice == null) {
@@ -151,7 +151,7 @@ public class ItemCache {
         }
     }
 
-    public record CacheResult(boolean hasData, long priceData, long acquireTime) {
+    public record CacheResult(boolean hasData, double priceData, long acquireTime) {
         public static CacheResult NO_RESULTS = new CacheResult(false, -2, 0);
         public static CacheResult NO_API_KEY = new CacheResult(false, -1, 0);
         public static CacheResult LOADING = new CacheResult(false, 0, 0);
@@ -159,7 +159,7 @@ public class ItemCache {
         private final static int MONEY_COLOR = new Color(1, 252, 0, 255).getRGB();
 
 
-        public static CacheResult data(long priceData) {
+        public static CacheResult data(double priceData) {
             return new CacheResult(true, priceData, System.currentTimeMillis());
         }
 
@@ -169,7 +169,7 @@ public class ItemCache {
 
         public Text getMessage(int count) {
             if (hasData) return Text.literal("§7Auction-Value: ")
-                    .append(Text.literal("$" + FormattingUtil.formatCurrency(this.priceData * count)).styled(style -> style.withColor(MONEY_COLOR)));
+                    .append(Text.literal("$" + FormattingUtil.formatCurrency((long) (this.priceData * count))).styled(style -> style.withColor(MONEY_COLOR)));
             if (priceData == 0) return Text.literal("§7Loading..");
             if (priceData == -1) return Text.literal("§cType /api to set your API-Key");
             return Text.literal("§7No Auctions Found");

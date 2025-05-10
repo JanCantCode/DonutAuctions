@@ -23,7 +23,7 @@ public class AuctionScraper {
         this.client = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build();
     }
 
-    public Long findCheapestMatchingPrice(String searchQuery, Map<String, Integer> targetEnchantments, Map<String, String> targetTrim, boolean useTrims) throws IOException, InterruptedException {
+    public Double findCheapestMatchingPrice(String searchQuery, Map<String, Integer> targetEnchantments, Map<String, String> targetTrim, boolean useTrims) throws IOException, InterruptedException {
         int page = 1;
 
         while (true) {
@@ -48,7 +48,9 @@ public class AuctionScraper {
                 if (useTrims && !matchesTrim(item.getAsJsonObject("enchants"), targetTrim)) { // we are currently ignoring trims, but if we ever stop doing so..
                     continue;
                 }
-                return auction.get("price").getAsLong();
+                long price = auction.get("price").getAsLong();
+                int count = item.get("count").getAsInt();
+                return (double) price / count;
             }
 
             page++;

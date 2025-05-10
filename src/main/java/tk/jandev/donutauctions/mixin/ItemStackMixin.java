@@ -44,7 +44,7 @@ public abstract class ItemStackMixin {
     )
     public void appendAfterLore(PlayerEntity player, TooltipContext context, CallbackInfoReturnable<List<Text>> cir, @Local(ordinal = 0) List<Text> tooltip) {
         if (player == null) return;
-        if (DonutAuctions.getInstance().shouldShowPrice((ItemStack) (Object) this)) {
+        if (DonutAuctions.getInstance().shouldRenderItem((ItemStack) (Object) this)) {
             tooltip.add(ItemCache.getInstance().getPrice((ItemStack) (Object) this).getMessage(getCount()));
         }
     }
@@ -62,7 +62,7 @@ public abstract class ItemStackMixin {
     public void appendAfterLoreNoNBT(PlayerEntity player, TooltipContext context, CallbackInfoReturnable<List<Text>> cir, @Local(ordinal = 0) List<Text> tooltip) {
         if (player == null) return;
         if (this.hasNbt()) return; // we've already appended our component after lore was appended
-        if (DonutAuctions.getInstance().shouldShowPrice((ItemStack) (Object) this)) {
+        if (DonutAuctions.getInstance().shouldRenderItem((ItemStack) (Object) this)) {
             tooltip.add(ItemCache.getInstance().getPrice((ItemStack) (Object) this).getMessage(getCount()));
         }
     }
